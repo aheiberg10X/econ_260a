@@ -1,6 +1,7 @@
 from math import floor
 import cell
 import os
+import random
 
 
 
@@ -28,10 +29,15 @@ def main() :
 
         #See if anything catches fire
         burn_iteration = 0
+        fire_susceptibility = random.uniform(.5,1.5)
         while True :
-            num_burning = cells.update_fire_state(no_new_start=burn_iteration > 0)
+            #random walk starting from the current susceptibility
+            fire_susceptibility += random.uniform(-.1-burn_iteration/float(10),.1)
+            num_burning = cells.update_fire_state(susceptibility=fire_susceptibility,
+                                                  no_new_start=burn_iteration > 0)
             if num_burning > 0 :
                 print "    num burning: %d" % num_burning
+                print "    susceptibility: %f" % fire_susceptibility
                 burn_name = "%s_burn_%d" % (name, burn_iteration)
                 filename = os.path.join(root, "%s.png" % burn_name)
                 cells.display(filename)

@@ -13,6 +13,8 @@ FIRE_CATCH_PROB_DEVEL = .3
 FIRE_START_PROB_WILD = 0
 FIRE_CATCH_PROB_WILD = .5
 
+DENSITY_OF_HOMES = .01
+
 palette = np.array([[  0,   0,   0],   # black
                     [  255,   0,   0],   # red
                     [  0,   120,   0],   # green
@@ -39,31 +41,43 @@ class Cell :
                 return True
         return False
 
-    def update_fire_state(self, cell, neighbors, no_new_start=False) :
+    def update_fire_state(self,
+                          cell,
+                          neighbors,
+                          susceptibility=1.0,
+                          no_new_start=False) :
+
         if cell.state == WILD :
-            if not no_new_start and random.random() < FIRE_START_PROB_WILD :
+            if not no_new_start and random.random() < FIRE_START_PROB_WILD * susceptibility :
                 self.state = BURNING
                 self.burn()
             else :
                 neighbors_burning = sum([1 for n in neighbors if n.state == BURNING])
-                catch_fire = self.burn_because_neighbors(neighbors_burning, FIRE_CATCH_PROB_WILD)
+                catch_fire = self.burn_because_neighbors(neighbors_burning,
+                                                         susceptibility * FIRE_CATCH_PROB_WILD)
                 if catch_fire :
                     self.state = BURNING
                     self.burn()
                 else :
                     self.state = WILD
+
         elif cell.state == DEVEL :
-            if not no_new_start and random.random() < FIRE_START_PROB_DEVEL :
+            neighbors_devel = sum([1 for n in neighbors if n.state == DEVEL])
+            if not no_new_start and \
+               random.random() < susceptibility * FIRE_START_PROB_DEVEL and \
+               neighbors_devel < len(neighbors) :
                 self.state = BURNING
                 self.burn()
             else :
                 neighbors_burning = sum([1 for n in neighbors if n.state == BURNING])
-                catch_fire = self.burn_because_neighbors(neighbors_burning, FIRE_CATCH_PROB_DEVEL)
+                catch_fire = self.burn_because_neighbors(neighbors_burning,
+                                                         susceptibility * FIRE_CATCH_PROB_DEVEL)
                 if catch_fire :
                     self.state = BURNING
                     self.burn()
                 else :
-                    self.state = DEVEL 
+                    self.state = DEVEL
+
         elif cell.state == BURNING :
             self.burnable_value = cell.burnable_value
             self.burn()
@@ -71,6 +85,7 @@ class Cell :
                 self.state = BURNT
             else :
                 self.state = BURNING
+
         elif cell.state == BURNT :
             self.state = BURNT
 
@@ -121,7 +136,7 @@ class CellGrid :
         if self.nrows == 0 :
             assert False
 
-        average_density = .01
+        average_density = DENSITY_OF_HOMES
         num_devel = 0
         for row in range(num_rows) :
             row_modulator = 2 * float(row) / num_rows
@@ -153,7 +168,10 @@ class CellGrid :
 
         self.current_cells_ix = self.toggle_index(self.current_cells_ix)
 
-    def update_fire_state(self, no_new_start=False) :
+    def update_fire_state(self,
+                          susceptibility=1.0,
+                          no_new_start=False) :
+
         current_cells = self.cells[self.current_cells_ix]
         next_cells = self.cells[self.toggle_index(self.current_cells_ix)]
 
@@ -163,7 +181,11 @@ class CellGrid :
                 cell = current_cells[row][col]
                 neighbor_coords = get_neighbors_fire(row, col, self.nrows, self.ncols)
                 neighbor_cells = [current_cells[neighb_row][neighb_col] for (neighb_row, neighb_col) in neighbor_coords]
-                next_cells[row][col].update_fire_state(cell, neighbor_cells, no_new_start)
+                next_cells[row][col].update_fire_state(cell,
+                                                       neighbor_cells,
+                                                       susceptibility,
+                                                       no_new_start)
+
                 if next_cells[row][col].state == BURNING :
                     burning_count += 1
 
