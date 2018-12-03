@@ -39,9 +39,9 @@ class Cell :
                 return True
         return False
 
-    def update_fire_state(self, cell, neighbors) :
+    def update_fire_state(self, cell, neighbors, no_new_start=False) :
         if cell.state == WILD :
-            if random.random() < FIRE_START_PROB_WILD :
+            if not no_new_start and random.random() < FIRE_START_PROB_WILD :
                 self.state = BURNING
                 self.burn()
             else :
@@ -53,7 +53,7 @@ class Cell :
                 else :
                     self.state = WILD
         elif cell.state == DEVEL :
-            if random.random() < FIRE_START_PROB_DEVEL :
+            if not no_new_start and random.random() < FIRE_START_PROB_DEVEL :
                 self.state = BURNING
                 self.burn()
             else :
@@ -153,7 +153,7 @@ class CellGrid :
 
         self.current_cells_ix = self.toggle_index(self.current_cells_ix)
 
-    def update_fire_state(self) :
+    def update_fire_state(self, no_new_start=False) :
         current_cells = self.cells[self.current_cells_ix]
         next_cells = self.cells[self.toggle_index(self.current_cells_ix)]
 
@@ -163,7 +163,7 @@ class CellGrid :
                 cell = current_cells[row][col]
                 neighbor_coords = get_neighbors_fire(row, col, self.nrows, self.ncols)
                 neighbor_cells = [current_cells[neighb_row][neighb_col] for (neighb_row, neighb_col) in neighbor_coords]
-                next_cells[row][col].update_fire_state(cell, neighbor_cells)
+                next_cells[row][col].update_fire_state(cell, neighbor_cells, no_new_start)
                 if next_cells[row][col].state == BURNING :
                     burning_count += 1
 

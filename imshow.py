@@ -29,13 +29,12 @@ def main() :
         #See if anything catches fire
         burn_iteration = 0
         while True :
-            num_burning = cells.update_fire_state()
+            num_burning = cells.update_fire_state(no_new_start=burn_iteration > 0)
             if num_burning > 0 :
                 print "    num burning: %d" % num_burning
                 burn_name = "%s_burn_%d" % (name, burn_iteration)
                 filename = os.path.join(root, "%s.png" % burn_name)
                 cells.display(filename)
-                num_burning = cells.update_fire_state()
             else :
                 break
 
