@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import random as random
 import numpy as np
+from math import pow
 
 #states
 WILD = 2
@@ -12,8 +13,14 @@ FIRE_START_PROB_DEVEL = .01
 FIRE_CATCH_PROB_DEVEL = .3
 FIRE_START_PROB_WILD = 0
 FIRE_CATCH_PROB_WILD = .5
+MAX_EST_FIRE_PROB = .04
 
 DENSITY_OF_HOMES = .01
+MEAN_COST_TO_DEVELOP = 1
+MEAN_RENT = MEAN_COST_TO_DEVELOP / float(70)
+
+TIME_HORIZON = 50 #years
+BURNT_REGEN_TIME = 1
 
 palette = np.array([[  0,   0,   0],   # black
                     [  255,   0,   0],   # red
@@ -21,19 +28,63 @@ palette = np.array([[  0,   0,   0],   # black
                     [  0,   0,   255],   # blue
                     [  255,   255,   255]])  # white
 
-
-
 class Cell :
     def __init__(self) :
         self.state = WILD
         self.burnable_value = 1
+        self.cost_to_develop = np.random.normal(MEAN_COST_TO_DEVELOP, MEAN_COST_TO_DEVELOP/float(5))
+        self.rent = np.random.normal(MEAN_RENT, MEAN_RENT/float(5))
+
+    def estimate_destruction(self, neighbor_density) :
+        #TODO: this is a placeholder. Peak at density=.5, zero at density=0 and 1
+        #Not realistic, should never be 0
+        shifted = neighbor_density - .5
+        if shifted < 0 :
+            shifted *= -1
+        return MAX_EST_FIRE_PROB - (shifted * MAX_EST_FIRE_PROB/.5)
 
     def update_developed_state(self, cell, neighbors) :
-        num_developed_neighbors = sum([1 for n in neighbors if n.state == DEVEL])
-        if cell.state == WILD and num_developed_neighbors > 1 :
+        if cell.state == DEVEL:
             self.state = DEVEL
+            return
+
+        if cell.state == BURNT :
+            self.state = BURNT
+            return
+
+        if cell.state == BURNING:
+            self.state = BURNING
+            return
+
+        num_developed_neighbors = sum([1 for n in neighbors if n.state == DEVEL])
+        expected_profit = 0
+        devel_density = (num_developed_neighbors + 1) / float(len(neighbors) + 1)
+        neighbor_density = num_developed_neighbors / float(len(neighbors))
+        est_prob_destruction = self.estimate_destruction(devel_density)
+        for year in range(TIME_HORIZON) :
+            expected_profit += self.rent * (1+neighbor_density*8) * pow(1-est_prob_destruction, year)
+
+
+        # if neighbor_density == 0 :
+        #      print num_developed_neighbors
+        #      print "discount : %f" % (1-est_prob_destruction)
+        #     print "exp profit: %f, cost: %f" % (expected_profit, self.cost_to_develop)
+
+        if num_developed_neighbors > 0 :
+            print num_developed_neighbors
+            print "discount : %f" % (1-est_prob_destruction)
+            print "exp profit: %f, cost: %f" % (expected_profit, self.cost_to_develop)
+
+        if expected_profit > self.cost_to_develop :
+            if random.random() < .5 :
+                self.state = DEVEL
         else :
-            self.state = cell.state
+            self.state = WILD
+
+        # if cell.state == WILD and num_developed_neighbors > 1 :
+        #     self.state = DEVEL
+        # else :
+            # self.state = cell.state
 
     def burn_because_neighbors(self, n_burning_neighbors, prob_catch) :
         for i in range(n_burning_neighbors) :
@@ -94,6 +145,7 @@ class Cell :
 
     def get_state(self) :
         return self.state
+
 
 def get_neighbors_devel(row, col, num_rows, num_cols) :
     possible = [(row-1, col-1),

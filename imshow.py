@@ -7,8 +7,15 @@ import random
 
 def main() :
     root = "/home/dev/amelia_econ/output_test"
+
     if not os.path.exists(root) :
         os.mkdir(root)
+    else :
+        for listing in os.listdir(root) :
+            fullpath = os.path.join(root, listing)
+            if os.path.isfile(fullpath):
+                os.unlink(fullpath)
+
 
     num_rows = 25
     num_cols = 100
