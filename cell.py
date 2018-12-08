@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import random as random
 import numpy as np
 from math import pow
+import copy
 
 #states
 WILD = 2
@@ -18,7 +19,9 @@ MAX_EST_FIRE_PROB = .04
 
 DENSITY_OF_HOMES = .01
 MEAN_COST_TO_DEVELOP = 1
+STD_COST_TO_DEVELOP = MEAN_COST_TO_DEVELOP / float(10)
 MEAN_RENT = MEAN_COST_TO_DEVELOP / float(70)
+STD_RENT = MEAN_RENT / float(10)
 
 TIME_HORIZON = 50 #years
 BURNT_REGEN_TIME = 1
@@ -29,12 +32,30 @@ palette = np.array([[  0,   0,   0],   # black
                     [  255,   255,   255],   # white
                     [  0,   0,   255]])  # blue
 
+def fraction_that_develop(mean_cost_to_develop,
+                          std_cost_to_develop,
+                          mean_rent,
+                          std_rent,
+                          fn_prob_destrution,
+                          neighbor_density,
+                          horizon) :
+    c = Cell(mean_cost_to_develop,
+             std_cost_to_develop,
+             mean_rent,
+             std_rent)
+    
+
+
 class Cell :
-    def __init__(self) :
+    def __init__(self,
+                 mean_cost_to_develop,
+                 std_cost_to_develop,
+                 mean_rent,
+                 std_rent) :
         self.state = WILD
         self.burnable_value = 1
-        self.cost_to_develop = np.random.normal(MEAN_COST_TO_DEVELOP, MEAN_COST_TO_DEVELOP/float(5))
-        self.rent = np.random.normal(MEAN_RENT, MEAN_RENT/float(5))
+        self.cost_to_develop = np.random.normal(mean_cost_to_develop, std_cost_to_develop)
+        self.rent = np.random.normal(mean_rent, std_rent)
 
     def estimate_destruction(self, neighbor_density) :
         #TODO: this is a placeholder. Peak at density=.5, zero at density=0 and 1
@@ -43,6 +64,13 @@ class Cell :
         if shifted < 0 :
             shifted *= -1
         return MAX_EST_FIRE_PROB - (shifted * MAX_EST_FIRE_PROB/.5)
+
+    def estimate_rent(self, horizon, devel_density, neighbor_density) :
+        prob_survival = 1 - self.estimate_destruction(devel_density)
+        expected_profit = 0
+        for year in range(horizon) :
+            expected_profit += self.rent * (1+neighbor_density*8) * pow(prob_survival, year)
+        return expected_profit
 
     def update_developed_state(self, cell, neighbors) :
         if cell.state == DEVEL:
@@ -58,23 +86,11 @@ class Cell :
             return
 
         num_developed_neighbors = sum([1 for n in neighbors if n.state == DEVEL])
-        expected_profit = 0
         devel_density = (num_developed_neighbors + 1) / float(len(neighbors) + 1)
         neighbor_density = num_developed_neighbors / float(len(neighbors))
-        est_prob_destruction = self.estimate_destruction(devel_density)
-        for year in range(TIME_HORIZON) :
-            expected_profit += self.rent * (1+neighbor_density*8) * pow(1-est_prob_destruction, year)
-
-
-        # if neighbor_density == 0 :
-        #      print num_developed_neighbors
-        #      print "discount : %f" % (1-est_prob_destruction)
-        #     print "exp profit: %f, cost: %f" % (expected_profit, self.cost_to_develop)
-
-        if num_developed_neighbors > 0 :
-            print num_developed_neighbors
-            print "discount : %f" % (1-est_prob_destruction)
-            print "exp profit: %f, cost: %f" % (expected_profit, self.cost_to_develop)
+        expected_profit = self.estimate_rent(TIME_HORIZON,
+                                             devel_density,
+                                             neighbor_density)
 
         if expected_profit > self.cost_to_develop :
             if random.random() < .5 :
@@ -188,8 +204,12 @@ class CellGrid :
         self.state_counts[BURNING] = 0
         self.state_counts[BURNT] = 0
 
-        self.cells = [[[Cell() for i in range(num_cols)] for j in range(num_rows)],
-                      [[Cell() for i in range(num_cols)] for j in range(num_rows)]]
+        init_cells = [[Cell(MEAN_COST_TO_DEVELOP,
+                            STD_COST_TO_DEVELOP,
+                            MEAN_RENT,
+                            STD_RENT) for i in range(num_cols)] for j in range(num_rows)]
+        self.cells = [init_cells,
+                      copy.deepcopy(init_cells)]
         self.current_cells_ix = 0
 
         if self.nrows == 0 :

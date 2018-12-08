@@ -42,7 +42,7 @@ def main() :
             num_fires_started = 0
             while True :
                 #random walk starting from the current susceptibility
-                fire_susceptibility += random.uniform(-.1-burn_iteration/float(10),.1)
+                fire_susceptibility += random.uniform(-.1-burn_iteration/float(20),.1)
                 cells.update_fire_state(susceptibility=fire_susceptibility,
                                         no_new_start=burn_iteration > 0)
                 if cells.state_counts[cell.BURNING] > 0 :
