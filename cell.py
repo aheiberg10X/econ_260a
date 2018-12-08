@@ -25,6 +25,7 @@ STD_RENT = MEAN_RENT / float(10)
 
 TIME_HORIZON = 50 #years
 BURNT_REGEN_TIME = 1
+NEIGHBOR_WINDOW = 1
 
 palette = np.array([[  0,   0,   0],   # black
                     [  255,   0,   0],   # red
@@ -173,22 +174,16 @@ class Cell :
     def get_state(self) :
         return self.state
 
-
-def get_neighbors_devel(row, col, num_rows, num_cols) :
-    possible = [(row-1, col-1),
-            (row-1, col),
-            (row-1, col+1),
-            (row, col-1),
-            (row, col+1),
-            (row+1, col-1),
-            (row+1, col),
-            (row+1, col+1)]
-
-    for (r,c) in possible :
-        if r < 0 or r >= num_rows or c < 0 or c >= num_cols :
-            pass
-        else :
-            yield (r,c)
+def get_neighbors_devel(row, col, num_rows, num_cols, window=1) :
+    for r in range(row-window, row+window+1) :
+        if r < 0 or r >= num_rows :
+            continue
+        for c in range(col-window, col+window+1) :
+            if c < 0 or c >= num_cols :
+                continue
+            if r == row and c == col :
+                continue
+            yield (r, c)
 
 def get_neighbors_fire(row, col, num_rows, num_cols) :
     possible = [(row-1, col),
@@ -252,7 +247,11 @@ class CellGrid :
         for row in range(self.nrows) :
             for col in range(self.ncols) :
                 cell = current_cells[row][col]
-                neighbor_coords = get_neighbors_devel(row, col, self.nrows, self.ncols)
+                neighbor_coords = get_neighbors_devel(row,
+                                                      col,
+                                                      self.nrows,
+                                                      self.ncols,
+                                                      NEIGHBOR_WINDOW)
                 neighbor_cells = [current_cells[neighb_row][neighb_col] for (neighb_row, neighb_col) in neighbor_coords]
                 next_cells[row][col].update_developed_state(cell, neighbor_cells)
 
