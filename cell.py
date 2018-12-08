@@ -32,19 +32,29 @@ palette = np.array([[  0,   0,   0],   # black
                     [  255,   255,   255],   # white
                     [  0,   0,   255]])  # blue
 
-def fraction_that_develop(mean_cost_to_develop,
+def sample_profits(mean_cost_to_develop,
                           std_cost_to_develop,
                           mean_rent,
                           std_rent,
-                          fn_prob_destrution,
-                          neighbor_density,
+                          num_devel_neighbors,
                           horizon) :
-    c = Cell(mean_cost_to_develop,
-             std_cost_to_develop,
-             mean_rent,
-             std_rent)
-    
+    profits = []
+    devel_density = (num_devel_neighbors + 1) / float(9)
+    neighbor_density = (num_devel_neighbors) / float(8)
+    for sample in range(1000) :
+        c = Cell(mean_cost_to_develop,
+                std_cost_to_develop,
+                mean_rent,
+                std_rent)
 
+        rent = c.estimate_rent(horizon,
+                               devel_density,
+                               neighbor_density)
+
+        cost = c.cost_to_develop
+        profits.append(rent - cost)
+
+    return profits
 
 class Cell :
     def __init__(self,
@@ -288,3 +298,16 @@ class CellGrid :
         plt.savefig(filename)
         #plt.show()
 
+if __name__ == "__main__" :
+    fig, axes = plt.subplots(nrows=9, ncols=1, sharex=True, sharey=True)
+    print fig
+    for num_neighbors in range(9) :
+        profits = sample_profits(MEAN_COST_TO_DEVELOP,
+                                 STD_COST_TO_DEVELOP,
+                                 MEAN_RENT,
+                                 STD_RENT,
+                                 num_neighbors,
+                                 TIME_HORIZON)
+        axes[num_neighbors].hist(profits)
+
+    plt.show()
