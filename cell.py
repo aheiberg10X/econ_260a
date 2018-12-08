@@ -5,9 +5,10 @@ from math import pow
 
 #states
 WILD = 2
-DEVEL = 4
+DEVEL = 3
 BURNT = 0
 BURNING = 1
+NUM_STATES = 4
 
 FIRE_START_PROB_DEVEL = .01
 FIRE_CATCH_PROB_DEVEL = .3
@@ -25,8 +26,8 @@ BURNT_REGEN_TIME = 1
 palette = np.array([[  0,   0,   0],   # black
                     [  255,   0,   0],   # red
                     [  0,   120,   0],   # green
-                    [  0,   0,   255],   # blue
-                    [  255,   255,   255]])  # white
+                    [  255,   255,   255],   # white
+                    [  0,   0,   255]])  # blue
 
 class Cell :
     def __init__(self) :
@@ -181,6 +182,12 @@ class CellGrid :
         self.nrows = num_rows
         self.ncols = num_cols
 
+        self.state_counts = [0]*NUM_STATES
+        self.state_counts[WILD] = num_rows * num_cols
+        self.state_counts[DEVEL] = 0
+        self.state_counts[BURNING] = 0
+        self.state_counts[BURNT] = 0
+
         self.cells = [[[Cell() for i in range(num_cols)] for j in range(num_rows)],
                       [[Cell() for i in range(num_cols)] for j in range(num_rows)]]
         self.current_cells_ix = 0
@@ -198,9 +205,9 @@ class CellGrid :
             current_cells = self.cells[self.current_cells_ix]
             for col in sample :
                 current_cells[row][col].state = DEVEL
-            num_devel += len(sample)
 
-        print "Number of cells develeoped during init: %d" % (num_devel)
+            self.state_counts[DEVEL] += len(sample)
+            self.state_counts[WILD] -= len(sample)
 
     def toggle_index(self, index) :
         if index == 0 : return 1
@@ -211,6 +218,7 @@ class CellGrid :
         current_cells = self.cells[self.current_cells_ix]
         next_cells = self.cells[self.toggle_index(self.current_cells_ix)]
 
+        developed_count = 0
         for row in range(self.nrows) :
             for col in range(self.ncols) :
                 cell = current_cells[row][col]
@@ -218,7 +226,11 @@ class CellGrid :
                 neighbor_cells = [current_cells[neighb_row][neighb_col] for (neighb_row, neighb_col) in neighbor_coords]
                 next_cells[row][col].update_developed_state(cell, neighbor_cells)
 
+                self.state_counts[next_cells[row][col].state] += 1
+                self.state_counts[current_cells[row][col].state] -= 1
+
         self.current_cells_ix = self.toggle_index(self.current_cells_ix)
+        return developed_count
 
     def update_fire_state(self,
                           susceptibility=1.0,
@@ -227,7 +239,6 @@ class CellGrid :
         current_cells = self.cells[self.current_cells_ix]
         next_cells = self.cells[self.toggle_index(self.current_cells_ix)]
 
-        burning_count = 0
         for row in range(self.nrows) :
             for col in range(self.ncols) :
                 cell = current_cells[row][col]
@@ -238,11 +249,10 @@ class CellGrid :
                                                        susceptibility,
                                                        no_new_start)
 
-                if next_cells[row][col].state == BURNING :
-                    burning_count += 1
+                self.state_counts[next_cells[row][col].state] += 1
+                self.state_counts[current_cells[row][col].state] -= 1
 
         self.current_cells_ix = self.toggle_index(self.current_cells_ix)
-        return burning_count
 
     def display(self, filename) :
         field = np.zeros((self.nrows, self.ncols), dtype=np.uint8)

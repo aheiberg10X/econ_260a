@@ -20,38 +20,49 @@ def main() :
     num_rows = 25
     num_cols = 100
     cells = cell.CellGrid(num_rows, num_cols)
-
     time_steps = 10
-    for time_step in range(time_steps) :
-        print "Time step %d" % (time_step)
 
-        name = "devel_%d" % (time_step)
-        filename = os.path.join(root, "%s.png" % name)
+    outputfile = os.path.join(root, "log.txt")
+    with open(outputfile, 'w') as fout :
+        fout.write("%s\n" % "Time,Developed,Wild,Fires Started,Burn Iterations,Total Burnt")
+        for time_step in range(time_steps) :
 
-        #render current state
-        cells.display(filename)
+            name = "devel_%d" % (time_step)
+            filename = os.path.join(root, "%s.png" % name)
 
-        #decide to build or not
-        cells.update_developed_state()
+            #render current state
+            cells.display(filename)
 
-        #See if anything catches fire
-        burn_iteration = 0
-        fire_susceptibility = random.uniform(.5,1.5)
-        while True :
-            #random walk starting from the current susceptibility
-            fire_susceptibility += random.uniform(-.1-burn_iteration/float(10),.1)
-            num_burning = cells.update_fire_state(susceptibility=fire_susceptibility,
-                                                  no_new_start=burn_iteration > 0)
-            if num_burning > 0 :
-                print "    num burning: %d" % num_burning
-                print "    susceptibility: %f" % fire_susceptibility
-                burn_name = "%s_burn_%d" % (name, burn_iteration)
-                filename = os.path.join(root, "%s.png" % burn_name)
-                cells.display(filename)
-            else :
-                break
+            #decide to build or not
+            num_developed = cells.update_developed_state()
 
-            burn_iteration += 1
+            #See if anything catches fire
+            burn_iteration = 0
+            fire_susceptibility = random.uniform(.5,1.5)
+            num_fires_started = 0
+            while True :
+                #random walk starting from the current susceptibility
+                fire_susceptibility += random.uniform(-.1-burn_iteration/float(10),.1)
+                cells.update_fire_state(susceptibility=fire_susceptibility,
+                                        no_new_start=burn_iteration > 0)
+                if cells.state_counts[cell.BURNING] > 0 :
+                    if burn_iteration == 0 :
+                        num_fires_started = cells.state_counts[cell.BURNING]
+
+                    burn_name = "%s_burn_%d" % (name, burn_iteration)
+                    filename = os.path.join(root, "%s.png" % burn_name)
+                    cells.display(filename)
+                else :
+                    break
+
+                burn_iteration += 1
+
+            fout.write("%d,%d,%d,%d,%d,%d\n" % (time_step,
+                                             cells.state_counts[cell.DEVEL],
+                                             cells.state_counts[cell.WILD],
+                                             num_fires_started,
+                                             burn_iteration,
+                                             cells.state_counts[cell.BURNT]))
 
 if __name__ == "__main__" :
     main()
