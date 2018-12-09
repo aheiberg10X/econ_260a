@@ -11,40 +11,25 @@ class CellConsiderate(Cell) :
                                               mean_rent,
                                               std_rent)
 
-    def estimate_destruction(self, neighbor_density) :
-        return super(CellConsiderate, self).estimate_destruction(neighbor_density)
-
     def estimate_rent(self,
                       horizon,
                       devel_density,
                       neighbor_density) :
+        #TODO: compute how adding this cell will imporove the values of the lands around it
+
+        #Below is just the placeholder, does the same as a regular "Cell"
         return super(CellConsiderate, self).estimate_rent(horizon,
                                                           devel_density,
                                                           neighbor_density)
 
-    def update_developed_state(self,
-                               cell,
-                               neighbors) :
-        super(CellConsiderate, self).update_developed_state(cell, neighbors)
+    def estimate_cost(self,
+                      horizon,
+                      devel_density,
+                      neighbor_density) :
+        #TODO: compute the odds of destroying your neighbors by putting a house here
 
-    def is_burn_because_neighbors(self,
-                                  n_burning_neighbors,
-                                  prob_catch) :
-        return super(CellConsiderate, self).is_burn_because_neighbors(n_burning_neighbors,
-                                                                      prob_catch)
+        #Below is just the placeholder, does the same as a regular "Cell"
+        return super(CellConsiderate, self).estimate_rent(horizon,
+                                                          devel_density,
+                                                          neighbor_density)
 
-    def update_fire_state(self,
-                          cell,
-                          neighbors,
-                          susceptibility,
-                          no_new_start) :
-        return super(CellConsiderate, self).update_fire_state(cell,
-                                                              neighbors,
-                                                              susceptibility,
-                                                              no_new_start)
-
-    def burn(self) :
-        super(CellConsiderate, self).burn()
-
-    def get_state(self) :
-        return super(CellConsiderate, self).get_state()

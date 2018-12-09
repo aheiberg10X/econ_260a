@@ -36,6 +36,7 @@ class Cell(object) :
                       horizon,
                       devel_density,
                       neighbor_density) :
+        print "base class cost"
         return self.cost_to_develop
 
     def update_developed_state(self, cell, neighbors) :
