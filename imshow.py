@@ -1,6 +1,7 @@
 from math import floor
-import cell
+from cell_grid import CellGrid
 import os
+from states import NUM_STATES, WILD, DEVEL, BURNING, BURNT
 import random
 
 
@@ -19,7 +20,7 @@ def main() :
 
     num_rows = 25
     num_cols = 100
-    cells = cell.CellGrid(num_rows, num_cols)
+    cells = CellGrid(num_rows, num_cols)
     time_steps = 10
 
     outputfile = os.path.join(root, "log.txt")
@@ -45,9 +46,9 @@ def main() :
                 fire_susceptibility += random.uniform(-.1-burn_iteration/float(20),.1)
                 cells.update_fire_state(susceptibility=fire_susceptibility,
                                         no_new_start=burn_iteration > 0)
-                if cells.state_counts[cell.BURNING] > 0 :
+                if cells.state_counts[BURNING] > 0 :
                     if burn_iteration == 0 :
-                        num_fires_started = cells.state_counts[cell.BURNING]
+                        num_fires_started = cells.state_counts[BURNING]
 
                     burn_name = "%s_burn_%d" % (name, burn_iteration)
                     filename = os.path.join(root, "%s.png" % burn_name)
@@ -58,11 +59,11 @@ def main() :
                 burn_iteration += 1
 
             fout.write("%d,%d,%d,%d,%d,%d\n" % (time_step,
-                                             cells.state_counts[cell.DEVEL],
-                                             cells.state_counts[cell.WILD],
+                                             cells.state_counts[DEVEL],
+                                             cells.state_counts[WILD],
                                              num_fires_started,
                                              burn_iteration,
-                                             cells.state_counts[cell.BURNT]))
+                                             cells.state_counts[BURNT]))
 
 if __name__ == "__main__" :
     main()
