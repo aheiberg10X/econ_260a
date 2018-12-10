@@ -3,8 +3,9 @@ import copy
 import random as random
 import numpy as np
 
-#from cell import Cell as Cell
-from cell_considerate import CellConsiderate as Cell
+from cell import Cell as Cell
+from cell import p_catch_from_neighbor
+# from cell_considerate import CellConsiderate as Cell
 
 import parameters as params
 from states import NUM_STATES, WILD, DEVEL, BURNING, BURNT
@@ -49,11 +50,13 @@ class CellGrid :
         self.state_counts[DEVEL] = 0
         self.state_counts[BURNING] = 0
         self.state_counts[BURNT] = 0
+        prob_catch_from_neighbors = p_catch_from_neighbor()
 
         init_cells = [[Cell(params.MEAN_COST_TO_DEVELOP,
                             params.STD_COST_TO_DEVELOP,
                             params.MEAN_RENT,
-                            params.STD_RENT) for i in range(num_cols)] for j in range(num_rows)]
+                            params.STD_RENT,
+                            prob_catch_from_neighbors) for i in range(num_cols)] for j in range(num_rows)]
 
         self.cells = [init_cells,
                       copy.deepcopy(init_cells)]
@@ -140,23 +143,38 @@ class CellGrid :
         #plt.show()
 
 def sample_profits(mean_cost_to_develop,
-                          std_cost_to_develop,
-                          mean_rent,
+                   std_cost_to_develop,
+                   mean_rent,
                    std_rent,
-                          num_devel_neighbors,
-                          horizon) :
+                   num_neighbors,
+                   num_devel_neighbors,
+                   horizon) :
     profits = []
     devel_density = (num_devel_neighbors + 1) / float(9)
     neighbor_density = (num_devel_neighbors) / float(8)
+    prob_catch_from_neighb = p_catch_from_neighbor()
+    neighbors = [Cell(mean_cost_to_develop,
+                std_cost_to_develop,
+                mean_rent,
+                      std_rent,
+                      prob_catch_from_neighb) for k in range(num_neighbors)]
+
     for sample in range(1000) :
         c = Cell(mean_cost_to_develop,
                 std_cost_to_develop,
                 mean_rent,
-                std_rent)
+                 std_rent,
+                 prob_catch_from_neighb)
+
+        for n in neighbors :
+            n.state = WILD
+
+        sample = random.sample(range(num_neighbors), num_devel_neighbors)
+        for n in sample :
+            neighbors[n].state = DEVEL
 
         rent = c.estimate_rent(horizon,
-                               devel_density,
-                               neighbor_density)
+                               neighbors)
 
         cost = c.cost_to_develop
         profits.append(rent - cost)
@@ -176,6 +194,7 @@ if __name__ == "__main__" :
                                  params.STD_COST_TO_DEVELOP,
                                  params.MEAN_RENT,
                                  params.STD_RENT,
+                                 num_potential_neighbors,
                                  num_neighbors,
                                  params.TIME_HORIZON)
         axes[num_neighbors].hist(profits)
