@@ -1,10 +1,11 @@
 import matplotlib.pyplot as plt
+import os
+from itertools import product 
 import copy
 import random as random
 import numpy as np
 
 from cell import Cell as Cell
-from cell import p_catch_from_neighbor
 # from cell_considerate import CellConsiderate as Cell
 
 import parameters as params
@@ -150,6 +151,60 @@ class CellGrid :
         plt.savefig(filename)
         #plt.show()
 
+def simulate_neighbor_destruction(num_potential_neighbors) :
+    dim = 3
+    if num_potential_neighbors != 8 :
+        assert False
+
+    filename = "prob_destruction_%f_%f_%f_%f_%d" % (params.FIRE_START_PROB_DEVEL,
+                                                    params.FIRE_CATCH_PROB_DEVEL,
+                                                    params.FIRE_START_PROB_WILD,
+                                                    params.FIRE_CATCH_PROB_WILD,
+                                                    num_potential_neighbors)
+    if os.path.exists(filename) :
+        chance_destruction = [0]*(num_potential_neighbors+1)
+        with open(filename) as fin :
+            for line in fin.readlines() :
+                splt = line.strip().split(',')
+                num_devel_neighbors = int(splt[0])
+                prob_dest = float(splt[1])
+                chance_destruction[num_devel_neighbors] = prob_dest
+
+        return chance_destruction
+
+    print "Running simulations to estimate destruction of center cell in neighborhood"
+
+    chance_destruction = []
+    num_simulations = 10000
+    for num_devel_neighbors in range(num_potential_neighbors+1) :
+        print "Simulating number develeoped neighbors = %d" % num_devel_neighbors
+        times_burned = 0
+        all_neighbors = list(product(range(1,dim+1), range(1,dim+1)))
+        for simulation in range(num_simulations) :
+            cells = CellGrid(dim+1, dim+1)
+            cells.set_state(dim/2+1, dim/2+1, DEVEL)
+            for (row,col) in random.sample(all_neighbors, num_devel_neighbors) :
+                cells.set_state(row, col, DEVEL)
+
+            while True :
+                cells.update_fire_state(susceptibility=1,
+                                        no_new_start=False)
+                if cells.state_counts[BURNING] == 0 :
+                    break
+            if cells.get_state(dim/2+1, dim/2+1) == BURNT :
+                times_burned += 1
+
+        chance_destruction.append(float(times_burned) / num_simulations)
+
+    with open(filename, 'w') as fout :
+        print "Saving file '%s' with probabilties to remember for next time" % filename
+        for (i,prob) in enumerate(chance_destruction) :
+            fout.write("%d,%f\n" % (i,prob))
+
+    return chance_destruction
+
+
+
 def sample_profits(mean_cost_to_develop,
                    std_cost_to_develop,
                    mean_rent,
@@ -160,19 +215,19 @@ def sample_profits(mean_cost_to_develop,
     profits = []
     devel_density = (num_devel_neighbors + 1) / float(9)
     neighbor_density = (num_devel_neighbors) / float(8)
-    prob_catch_from_neighb = p_catch_from_neighbor()
+    chance_destruction_lookup = simulate_neighbor_destruction(8)
     neighbors = [Cell(mean_cost_to_develop,
-                std_cost_to_develop,
-                mean_rent,
+                      std_cost_to_develop,
+                      mean_rent,
                       std_rent,
-                      prob_catch_from_neighb) for k in range(num_neighbors)]
+                      chance_destruction_lookup) for k in range(num_neighbors)]
 
     for sample in range(1000) :
         c = Cell(mean_cost_to_develop,
                 std_cost_to_develop,
                 mean_rent,
                  std_rent,
-                 prob_catch_from_neighb)
+                 chance_destruction_lookup)
 
         for n in neighbors :
             n.state = WILD
