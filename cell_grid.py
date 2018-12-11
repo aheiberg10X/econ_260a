@@ -41,7 +41,7 @@ def get_neighbors_fire(row, col, num_rows, num_cols) :
             yield (r,c)
 
 class CellGrid :
-    def __init__(self, num_rows, num_cols) :
+    def __init__(self, num_rows, num_cols, prob_catch_from_neighbors=[]) :
         self.nrows = num_rows
         self.ncols = num_cols
 
@@ -50,7 +50,9 @@ class CellGrid :
         self.state_counts[DEVEL] = 0
         self.state_counts[BURNING] = 0
         self.state_counts[BURNT] = 0
-        prob_catch_from_neighbors = p_catch_from_neighbor()
+
+        num_potential_neighbors = len(list(get_neighbors_devel(4, 4, 8, 8, params.NEIGHBOR_WINDOW)))
+        #prob_catch_from_neighbors = p_catch_from_neighbor(num_potential_neighbors)
 
         init_cells = [[Cell(params.MEAN_COST_TO_DEVELOP,
                             params.STD_COST_TO_DEVELOP,
@@ -78,6 +80,12 @@ class CellGrid :
 
             self.state_counts[DEVEL] += len(sample)
             self.state_counts[WILD] -= len(sample)
+
+    def set_state(self, row, col, state) :
+        self.cells[self.current_cells_ix][row][col].state = state
+
+    def get_state(self, row, col) :
+        return self.cells[self.current_cells_ix][row][col].state
 
     def toggle_index(self, index) :
         if index == 0 : return 1

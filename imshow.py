@@ -1,9 +1,62 @@
 from math import floor
 from cell_grid import CellGrid
 import os
+import parameters as params
 from states import NUM_STATES, WILD, DEVEL, BURNING, BURNT
 import random
+from itertools import product 
 
+def simulate_neighbor_destruction(num_potential_neighbors) :
+    dim = 3
+    if num_potential_neighbors != 8 :
+        assert False
+
+    filename = "prob_destruction_%f_%f_%f_%f_%d" % (params.FIRE_START_PROB_DEVEL,
+                                                    params.FIRE_CATCH_PROB_DEVEL,
+                                                    params.FIRE_START_PROB_WILD,
+                                                    params.FIRE_CATCH_PROB_WILD,
+                                                    num_potential_neighbors)
+    if os.path.exists(filename) :
+        chance_destruction = [0]*(num_potential_neighbors+1)
+        with open(filename) as fin :
+            for line in fin.readlines() :
+                splt = line.strip().split(',')
+                num_devel_neighbors = int(splt[0])
+                prob_dest = float(splt[1])
+                chance_destruction[num_devel_neighbors] = prob_dest
+
+        return chance_destruction
+
+    print "Running simulations to estimate destruction of center cell in neighborhood"
+
+    chance_destruction = []
+    num_simulations = 10000
+    for num_devel_neighbors in range(num_potential_neighbors+1) :
+        print "Simulating number develeoped neighbors = %d" % num_devel_neighbors
+        times_burned = 0
+        all_neighbors = list(product(range(1,dim+1), range(1,dim+1)))
+        for simulation in range(num_simulations) :
+            cells = CellGrid(dim+1, dim+1)
+            cells.set_state(dim/2+1, dim/2+1, DEVEL)
+            for (row,col) in random.sample(all_neighbors, num_devel_neighbors) :
+                cells.set_state(row, col, DEVEL)
+
+            while True :
+                cells.update_fire_state(susceptibility=1,
+                                        no_new_start=False)
+                if cells.state_counts[BURNING] == 0 :
+                    break
+            if cells.get_state(dim/2+1, dim/2+1) == BURNT :
+                times_burned += 1
+
+        chance_destruction.append(float(times_burned) / num_simulations)
+
+    with open(filename, 'w') as fout :
+        print "Saving file '%s' with probabilties to remember for next time" % filename
+        for (i,prob) in enumerate(chance_destruction) :
+            fout.write("%d,%f\n" % (i,prob))
+
+    return chance_destruction
 
 
 def main() :
@@ -20,7 +73,10 @@ def main() :
 
     num_rows = 25
     num_cols = 100
-    cells = CellGrid(num_rows, num_cols)
+    chance_destruction_lookup = simulate_neighbor_destruction(8)
+    cells = CellGrid(num_rows,
+                     num_cols,
+                     chance_destruction_lookup)
     time_steps = 10
 
     outputfile = os.path.join(root, "log.txt")
